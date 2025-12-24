@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>x313warrior API Dorking</title>
+  <style>
+    :root{
+      --bg:#0f1220;--card:#171a2e;--accent:#7c7cff;--accent2:#2dd4bf;--text:#e5e7eb;--muted:#9ca3af;
+    }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+    body{margin:0;min-height:100vh;background:radial-gradient(1200px 600px at 10% -10%,#1b1f4a,transparent),radial-gradient(800px 500px at 90% 10%,#0a3d3a,transparent),var(--bg);color:var(--text)}
+    .wrap{max-width:1200px;margin:auto;padding:24px}
+    .title{text-align:center;margin:10px 0 6px;font-weight:800;letter-spacing:.5px}
+    .subtitle{text-align:center;color:var(--muted);margin-bottom:20px}
+    .setbar{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:24px}
+    .setbar input{min-width:240px;max-width:420px;width:60%;padding:12px 14px;border-radius:12px;border:1px solid #2b2f55;background:#0b0e1c;color:var(--text)}
+    .setbar button{padding:12px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#020617;font-weight:700;cursor:pointer}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+    .card{background:linear-gradient(180deg,#1a1e3a,#121532);border:1px solid #242866;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h3{margin:0 0 10px;font-size:1.05rem;color:#c7d2fe}
+    .dork{background:#0b0e1c;border:1px solid #232866;border-radius:12px;padding:12px;margin-bottom:10px}
+    .dork code{display:block;white-space:pre-wrap;word-break:break-word;color:#e5e7eb}
+    .actions{display:flex;gap:8px;margin-top:8px}
+    .actions button{flex:1;padding:8px 10px;border-radius:10px;border:1px solid #2b2f55;background:#0f1330;color:#e5e7eb;cursor:pointer}
+    .actions button.go{background:#0b3a35;border-color:#0f766e}
+    .footer{text-align:center;color:var(--muted);margin:22px 0 6px;font-size:.9rem}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="title">x313warrior API Dorking</h1>
+    <div class="subtitle">Bug bounty focused Google dorking dashboard</div>
+
+    <div class="setbar">
+      <input id="target" placeholder="example.com or target.tld" />
+      <button onclick="setTarget()">SET</button>
+      <button onclick="exportTXT()">Export TXT</button>
+      <button onclick="exportMD()">Export MD</button>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="footer">Client-side only • Copy & Go open Google in a new tab</div>
+  </div>
+
+<script>
+const dorks = [
+  {
+    title:"General API Endpoint Discovery",
+    items:[
+      'site:{target} inurl:api',
+      'site:{target} inurl:"/api/v1/"',
+      'site:{target} inurl:"/rest/"',
+      'site:{target} inurl:"/graphql"',
+      'site:{target} inurl:"/soap/"',
+      'site:{target} inurl:"/includes/api/"',
+      'site:{target} (inurl:"/swagger/" OR inurl:"/swagger-ui/")',
+      'site:{target} (inurl:"/openapi.json" OR inurl:"/swagger.json")',
+      'site:{target} (inurl:api OR inurl:rest OR inurl:v1 OR inurl:v2 OR inurl:v3)',
+      'site:{target} inurl:graphql',
+      'site:{target} (inurl:/application.wadl OR filetype:wadl OR ext:wadl)',
+      'site:{target} (filetype:wsdl OR ext:wsdl)',
+      'site:{target} inurl:/%24metadata',
+      'site:{target} inurl:docs webhook'
+    ]
+  },
+  {
+    title:"API Key and Token Discovery",
+    items:[
+      'site:{target} intext:"api_key="',
+      'site:{target} (intext:"API Key" OR intext:"apiKey")',
+      'site:{target} (intext:"Bearer " OR intext:"Authorization: Bearer")',
+      'site:{target} filetype:log "Authorization: Bearer"',
+      'site:{target} filetype:log "Access Token"',
+      'site:{target} filetype:log "client_id" "client_secret"',
+      'site:{target} intitle:"index of" (api_key OR "api key" OR apiKey) -pool',
+      'site:{target} intitle:"index.of" intext:"api.txt"'
+    ]
+  },
+  {
+    title:"API Documentation and Configuration Files",
+    items:[
+      'site:{target} intext:"API documentation"',
+      'site:{target} filetype:json',
+      'site:{target} filetype:xml',
+      'site:{target} (filetype:yaml OR filetype:yml)',
+      'site:{target} filetype:env "API_KEY"'
+    ]
+  },
+  {
+    title:"Open Directories and Log Files",
+    items:[
+      'site:{target} intitle:"index of" inurl:api',
+      'site:{target} intitle:"index of" "api.log"',
+      'site:{target} filetype:log "GET /api/"',
+      'site:{target} filetype:log "POST /api/"'
+    ]
+  },
+  {
+    title:"WordPress API Discovery",
+    items:[
+      'site:{target} inurl:"/wp-json/wp/v2/users"',
+      'site:{target} inurl:"/wp-json/"'
+    ]
+  },
+  {
+    title:"Miscellaneous API-Related Dorks",
+    items:[
+      'site:{target} inurl:"/geoserver/ows?service=wfs"',
+      'site:{target} ext:php inurl:"api.php?action="',
+      'site:{target} inurl:"/api/" intitle:"index of"',
+      'site:{target} inurl:"/api/" filetype:sql',
+      'site:{target} inurl:"/api/" filetype:pdf'
+    ]
+  },
+  {
+    title:"Admin Panels",
+    items:[
+      'site:{target} (inurl:admin OR inurl:login) (filetype:php OR filetype:asp OR filetype:aspx)'
+    ]
+  },
+  {
+    title:"Additional Useful Dorks",
+    items:[
+      'site:{target} inurl:health OR inurl:status "api"',
+      'site:{target} inurl:actuator',
+      'site:{target} inurl:debug "api"',
+      'site:{target} inurl:config "api"',
+      'site:{target} filetype:js intext:"/api/"'
+    ]
+  }
+];
+
+const grid = document.getElementById('grid');
+let currentTarget = '';
+
+function render(){
+  grid.innerHTML='';
+  dorks.forEach(cat=>{
+    const card=document.createElement('div');card.className='card';
+    const h=document.createElement('h3');h.textContent=cat.title;card.appendChild(h);
+    cat.items.forEach(t=>{
+      const box=document.createElement('div');box.className='dork';
+      const code=document.createElement('code');code.textContent=t.replace('{target}', currentTarget||'{target}');
+      box.appendChild(code);
+      const actions=document.createElement('div');actions.className='actions';
+      const copy=document.createElement('button');copy.textContent='Copy';copy.onclick=()=>copyText(code.textContent);
+      const go=document.createElement('button');go.textContent='Go';go.className='go';go.onclick=()=>goSearch(code.textContent);
+      actions.appendChild(copy);actions.appendChild(go);box.appendChild(actions);
+      card.appendChild(box);
+    });
+    grid.appendChild(card);
+  });
+}
+
+function setTarget(){
+  let t=document.getElementById('target').value.trim();
+  if(!t) return alert('Enter a target domain');
+  t=t.replace(/^https?:\/\//,'').replace(/\/$/,'');
+  currentTarget=t;
+  render();
+}
+
+function copyText(txt){navigator.clipboard.writeText(txt)}
+function exportTXT(){
+  if(!currentTarget) return alert('Set target first');
+  let out='D@rk9r!nC3 API Dorking – '+currentTarget+'\n\n';
+  dorks.forEach(c=>{
+    out+='['+c.title+']\n';
+    c.items.forEach(i=>out+=i.replace('{target}',currentTarget)+'\n');
+    out+='\n';
+  });
+  download(out,'api-dorks-'+currentTarget+'.txt');
+}
+
+function exportMD(){
+  if(!currentTarget) return alert('Set target first');
+  let out='# D@rk9r!nC3 API Dorking\n\n**Target:** '+currentTarget+'\n\n';
+  dorks.forEach(c=>{
+    out+='## '+c.title+'\n';
+    c.items.forEach(i=>out+='- `'+i.replace('{target}',currentTarget)+'`\n');
+    out+='\n';
+  });
+  download(out,'api-dorks-'+currentTarget+'.md');
+}
+
+function download(data,filename){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([data],{type:'text/plain'}));
+  a.download=filename;
+  a.click();
+}
+
+function goSearch(txt){window.open('https://www.google.com/search?q='+encodeURIComponent(txt),'_blank')}
+
+render();
+</script>
+</body>
+</html>
